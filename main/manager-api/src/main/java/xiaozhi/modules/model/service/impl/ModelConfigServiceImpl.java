@@ -15,16 +15,18 @@ import lombok.AllArgsConstructor;
 import xiaozhi.common.constant.Constant;
 import xiaozhi.common.exception.RenException;
 import xiaozhi.common.page.PageData;
+import xiaozhi.common.redis.RedisKeys;
+import xiaozhi.common.redis.RedisUtils;
 import xiaozhi.common.service.impl.BaseServiceImpl;
 import xiaozhi.common.utils.ConvertUtils;
 import xiaozhi.modules.model.dao.ModelConfigDao;
+import xiaozhi.modules.model.dto.ModelBasicInfoDTO;
 import xiaozhi.modules.model.dto.ModelConfigBodyDTO;
 import xiaozhi.modules.model.dto.ModelConfigDTO;
 import xiaozhi.modules.model.dto.ModelProviderDTO;
 import xiaozhi.modules.model.entity.ModelConfigEntity;
 import xiaozhi.modules.model.service.ModelConfigService;
 import xiaozhi.modules.model.service.ModelProviderService;
-import xiaozhi.modules.timbre.service.TimbreService;
 
 @Service
 @AllArgsConstructor
@@ -33,11 +35,17 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
 
     private final ModelConfigDao modelConfigDao;
     private final ModelProviderService modelProviderService;
-    private final TimbreService timbreService;
+    private final RedisUtils redisUtils;
 
     @Override
-    public List<String> getModelCodeList(String modelType, String modelName) {
-        return modelConfigDao.getModelCodeList(modelType, modelName);
+    public List<ModelBasicInfoDTO> getModelCodeList(String modelType, String modelName) {
+        List<ModelConfigEntity> entities = modelConfigDao.selectList(
+                new QueryWrapper<ModelConfigEntity>()
+                        .eq("model_type", modelType)
+                        .eq("is_enabled", 1)
+                        .like(StringUtils.isNotBlank(modelName), "model_name", "%" + modelName + "%")
+                        .select("id", "model_name"));
+        return ConvertUtils.sourceToTarget(entities, ModelBasicInfoDTO.class);
     }
 
     @Override
@@ -87,6 +95,8 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
         modelConfigEntity.setId(id);
         modelConfigEntity.setModelType(modelType);
         modelConfigDao.updateById(modelConfigEntity);
+        // 清除缓存
+        redisUtils.delete(RedisKeys.getModelConfigById(modelConfigEntity.getId()));
         return ConvertUtils.sourceToTarget(modelConfigEntity, ModelConfigDTO.class);
     }
 
@@ -96,7 +106,52 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
     }
 
     @Override
-    public List<String> getVoiceList(String modelId, String voiceName) {
-        return timbreService.getVoiceNames(modelId, voiceName);
+    public String getModelNameById(String id) {
+        if (StringUtils.isBlank(id)) {
+            return null;
+        }
+
+        String cachedName = (String) redisUtils.get(RedisKeys.getModelNameById(id));
+
+        if (StringUtils.isNotBlank(cachedName)) {
+            return cachedName;
+        }
+
+        ModelConfigEntity entity = modelConfigDao.selectById(id);
+        if (entity != null) {
+            String modelName = entity.getModelName();
+            if (StringUtils.isNotBlank(modelName)) {
+                redisUtils.set(RedisKeys.getModelNameById(id), modelName);
+            }
+            return modelName;
+        }
+
+        return null;
+    }
+
+    @Override
+    public ModelConfigEntity getModelById(String id, boolean isCache) {
+        if (StringUtils.isBlank(id)) {
+            return null;
+        }
+        if (isCache) {
+            ModelConfigEntity cachedConfig = (ModelConfigEntity) redisUtils.get(RedisKeys.getModelConfigById(id));
+            if (cachedConfig != null) {
+                return ConvertUtils.sourceToTarget(cachedConfig, ModelConfigEntity.class);
+            }
+        }
+        ModelConfigEntity entity = modelConfigDao.selectById(id);
+        if (entity != null) {
+            redisUtils.set(RedisKeys.getModelConfigById(id), entity);
+        }
+        return entity;
+    }
+
+    @Override
+    public void setDefaultModel(String modelType, int isDefault) {
+        ModelConfigEntity entity = new ModelConfigEntity();
+        entity.setIsDefault(isDefault);
+        modelConfigDao.update(entity, new QueryWrapper<ModelConfigEntity>()
+                .eq("model_type", modelType));
     }
 }

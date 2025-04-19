@@ -26,8 +26,6 @@ spring:
       enabled: true
   main:
     allow-bean-definition-overriding: true
-  liquibase:
-    enabled: false
 
 knife4j:
   enable: true
@@ -66,6 +64,3 @@ mybatis-plus:
     prefix:
     blobType: BLOB
     boolValue: TRUE
-
-app:
-  fronted-url: http://localhost:8001

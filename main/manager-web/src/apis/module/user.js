@@ -104,4 +104,38 @@ export default {
             })
             .send();
     },
+    // 修改用户状态
+    changeUserStatus(status, userIds, successCallback) {
+        console.log(555, userIds)
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/admin/users/changeStatus/${status}`)
+            .method('put')
+            .data(userIds)
+            .success((res) => {
+                RequestService.clearRequestTime()
+                successCallback(res);
+            })
+            .fail((err) => {
+                console.error('修改用户状态失败:', err)
+                RequestService.reAjaxFun(() => {
+                    this.changeUserStatus(status, userIds)
+                })
+            }).send()
+    },
+    // 获取公共配置
+    getPubConfig(callback) {
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/user/pub-config`)
+            .method('GET')
+            .success((res) => {
+                RequestService.clearRequestTime();
+                callback(res);
+            })
+            .fail((err) => {
+                console.error('获取公共配置失败:', err);
+                RequestService.reAjaxFun(() => {
+                    this.getPubConfig(callback);
+                });
+            }).send();
+    },
 }
