@@ -2,16 +2,18 @@
   <el-header class="header">
     <div class="header-container">
       <!-- 左侧元素 -->
-      <div class="header-left">
+      <div class="header-left" @click="goHome">
         <img loading="lazy" alt="" src="@/assets/xiaozhi-logo.png" class="logo-img" />
         <img loading="lazy" alt="" src="@/assets/xiaozhi-ai.png" class="brand-img" />
       </div>
 
       <!-- 中间导航菜单 -->
       <div class="header-center">
-        <div class="equipment-management" :class="{ 'active-tab': $route.path === '/home' }" @click="goHome">
+        <div class="equipment-management"
+          :class="{ 'active-tab': $route.path === '/home' || $route.path === '/role-config' || $route.path === '/device-management' }"
+          @click="goHome">
           <img loading="lazy" alt="" src="@/assets/header/robot.png"
-            :style="{ filter: $route.path === '/home' ? 'brightness(0) invert(1)' : 'None' }" />
+            :style="{ filter: $route.path === '/home' || $route.path === '/role-config' || $route.path === '/device-management' ? 'brightness(0) invert(1)' : 'None' }" />
           智能体管理
         </div>
         <div v-if="isSuperAdmin" class="equipment-management" :class="{ 'active-tab': $route.path === '/model-config' }"
@@ -26,11 +28,34 @@
             :style="{ filter: $route.path === '/user-management' ? 'brightness(0) invert(1)' : 'None' }" />
           用户管理
         </div>
+        <div v-if="isSuperAdmin" class="equipment-management"
+          :class="{ 'active-tab': $route.path === '/ota-management' }" @click="goOtaManagement">
+          <img loading="lazy" alt="" src="@/assets/header/firmware_update.png"
+            :style="{ filter: $route.path === '/ota-management' ? 'brightness(0) invert(1)' : 'None' }" />
+          OTA管理
+        </div>
+        <el-dropdown v-if="isSuperAdmin" trigger="click" class="equipment-management more-dropdown"
+          :class="{ 'active-tab': $route.path === '/dict-management' || $route.path === '/params-management' }">
+          <span class="el-dropdown-link">
+            <img loading="lazy" alt="" src="@/assets/header/param_management.png"
+              :style="{ filter: $route.path === '/dict-management' || $route.path === '/params-management' ? 'brightness(0) invert(1)' : 'None' }" />
+            参数字典
+            <i class="el-icon-arrow-down el-icon--right"></i>
+          </span>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item @click.native="goParamManagement">
+              参数管理
+            </el-dropdown-item>
+            <el-dropdown-item @click.native="goDictManagement">
+              字典管理
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
       </div>
 
       <!-- 右侧元素 -->
       <div class="header-right">
-        <div class="search-container">
+        <div class="search-container" v-if="$route.path === '/home'">
           <el-input v-model="search" placeholder="输入名称搜索.." class="custom-search-input"
             @keyup.enter.native="handleSearch">
             <i slot="suffix" class="el-icon-search search-icon" @click="handleSearch"></i>
@@ -95,6 +120,15 @@ export default {
     },
     goModelConfig() {
       this.$router.push('/model-config')
+    },
+    goParamManagement() {
+      this.$router.push('/params-management')
+    },
+    goOtaManagement() {
+      this.$router.push('/ota-management')
+    },
+    goDictManagement() {
+      this.$router.push('/dict-management')
     },
     // 获取用户信息
     fetchUserInfo() {
@@ -161,7 +195,7 @@ export default {
 .header {
   background: #f6fcfe66;
   border: 1px solid #fff;
-  height: 53px !important;
+  height: 63px !important;
   min-width: 900px;
   /* 设置最小宽度防止过度压缩 */
   overflow: hidden;
@@ -188,7 +222,7 @@ export default {
 }
 
 .brand-img {
-  height: 18px;
+  height: 20px;
 }
 
 .header-center {
@@ -210,13 +244,13 @@ export default {
 
 .equipment-management {
   padding: 0 9px;
-  width: 82px;
-  height: 24px;
-  border-radius: 12px;
+  width: px;
+  height: 30px;
+  border-radius: 15px;
   background: #deeafe;
   display: flex;
   justify-content: center;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   gap: 7px;
   color: #3d4566;
@@ -226,6 +260,7 @@ export default {
   cursor: pointer;
   flex-shrink: 0;
   /* 防止导航按钮被压缩 */
+  padding: 0px 15px;
 }
 
 .equipment-management.active-tab {
@@ -322,6 +357,34 @@ export default {
   .search-container {
     max-width: 120px;
     min-width: 100px;
+  }
+}
+
+.equipment-management.more-dropdown {
+  position: relative;
+}
+
+.equipment-management.more-dropdown .el-dropdown-menu {
+  position: absolute;
+  right: 0;
+  min-width: 120px;
+  margin-top: 5px;
+}
+
+.el-dropdown-menu__item {
+  min-width: 60px;
+  padding: 8px 20px;
+  font-size: 14px;
+  color: #606266;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .equipment-management.more-dropdown .el-dropdown-menu {
+    position: fixed;
+    right: 10px;
+    top: 60px;
+    z-index: 2000;
   }
 }
 </style>
